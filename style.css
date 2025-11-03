@@ -1,0 +1,162 @@
+/* تنسيقات أساسية ومحسنة */
+:root {
+    --primary-color: #4a5568; /* لون أساسي غامق */
+    --accent-color: #63b3ed; /* لون مميز أزرق فاتح */
+    --glass-bg: rgba(255, 255, 255, 0.2); /* خلفية زجاجية شفافة */
+    --glass-border: rgba(255, 255, 255, 0.5); /* إطار زجاجي */
+    --total-color: #48bb78; /* لون الإجمالي الأخضر */
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Tahoma', 'Arial', sans-serif; 
+}
+
+body {
+    background: linear-gradient(135deg, #a7b7c9 0%, #6382a2 100%); /* خلفية متدرجة */
+    min-height: 100vh;
+    direction: rtl;
+    color: var(--primary-color);
+}
+
+main {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+}
+
+/* Glassmorphism Styles - الأسلوب الزجاجي الفخم */
+.glass-card, .glass-header {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px); /* تأثير الزجاج */
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease-in-out; 
+}
+
+.glass-card:hover {
+    transform: translateY(-3px);
+}
+
+.glass-header {
+    width: 100%;
+    text-align: center;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+/* Filters Panel */
+#filter-panel {
+    width: 90%;
+    max-width: 1000px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.filter-group {
+    padding: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+.date-input-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+}
+
+select, input[type="date"] {
+    padding: 8px 12px;
+    border: 1px solid var(--accent-color);
+    border-radius: 8px;
+    background-color: white;
+    transition: all 0.3s;
+    outline: none;
+}
+
+.or-separator {
+    font-weight: bold;
+    color: var(--primary-color);
+    margin: 0 5px;
+}
+
+/* Fashikh Button Animation - زر التصفية */
+.fashikh-button {
+    background-color: var(--accent-color);
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    font-size: 1.1em;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.3s, transform 0.1s, box-shadow 0.3s;
+}
+
+.fashikh-button:hover {
+    background-color: #4299e1;
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Table Styles - لعرض البيانات */
+#results-section {
+    width: 90%;
+    max-width: 1000px;
+    opacity: 0; 
+}
+
+.table-container {
+    overflow-x: auto;
+}
+
+#data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+#data-table th, #data-table td {
+    padding: 12px 15px;
+    text-align: right;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+#data-table th {
+    background-color: rgba(99, 179, 237, 0.3); 
+    font-weight: bold;
+    color: var(--primary-color);
+}
+
+#data-table tbody tr:nth-child(even) {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* تنسيق صف الإجمالي الكلي المميز */
+.grand-total-row {
+    font-weight: bold;
+    background-color: var(--total-color); 
+    color: white;
+    font-size: 1.1em;
+}
+
+.grand-total-row td {
+    border-bottom: none !important;
+    padding: 15px !important;
+}
+
+.grand-total-row td:first-child {
+    text-align: right;
+}
+
+.hidden {
+    display: none;
+}
