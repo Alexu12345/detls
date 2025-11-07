@@ -8,18 +8,17 @@ const firebaseConfig = {
     appId: "1:246595598451:web:c6842f1618dffe765a5206"
 };
 
+
 // تهيئة Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
-// العناصر من DOM
+// العناصر من DOM (تبقى كما هي)
 const accountFilterEl = document.getElementById('account-filter');
 const userFilterEl = document.getElementById('user-filter');
 const applyBtn = document.getElementById('apply-filters-btn');
 const tableBody = document.getElementById('data-table-body');
 const resultsSection = document.getElementById('results-section');
-
-// عناصر فلاتر التاريخ المعقدة
 const dateModeEl = document.getElementById('filter-date-mode');
 const singleDateInputEl = document.getElementById('single-date-input');
 const filterFromDateEl = document.getElementById('filter-from-date');
@@ -56,9 +55,18 @@ function processRecord(record) {
     };
 }
 
+// **✅ وظيفة تنسيق التاريخ المُصححة (اليوم/الشهر فقط)**
+function formatDateDM(timestampInSeconds) {
+    // 🚨 الإصلاح الحاسم للسنة الغريبة: ضرب الـ timestamp في 1000
+    const dateObj = new Date(timestampInSeconds * 1000); 
+    const day = dateObj.getDate().toString().padStart(2, '0');
+    const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    return `${day}/${month}`;
+}
+
 
 // =======================================================
-// وظيفة موازنة التاريخ المبسطة (الـ Fashikh Logic)
+// وظيفة موازنة التاريخ المبسطة (تبقى كما هي)
 // =======================================================
 function setupDateFilters() {
     dateModeEl.addEventListener('change', () => {
@@ -97,7 +105,7 @@ function setupDateFilters() {
 
 
 // =======================================================
-// **الوظيفة الجديدة: تجميع البيانات (مصححة)**
+// **✅ الوظيفة المُصححة: تجميع وفرز البيانات**
 // =======================================================
 function aggregateRecords(records, groupByField) {
     const aggregationMap = {};
@@ -105,9 +113,8 @@ function aggregateRecords(records, groupByField) {
     records.forEach(record => {
         let key;
         if (groupByField === 'date') {
-            // 🚨 الإصلاح الحاسم: ضرب الـ timestamp في 1000 للتحويل إلى مللي ثانية
-            const dateObj = new Date(record.timestamp * 1000); 
-            key = dateObj.toLocaleDateString('ar-EG');
+            // استخدام التنسيق الجديد اليوم/الشهر كمفتاح للتجميع
+            key = formatDateDM(record.timestamp); 
         } else {
             key = record[groupByField];
         }
@@ -123,22 +130,37 @@ function aggregateRecords(records, groupByField) {
         aggregationMap[key].totalTime += record.totalTime; 
         aggregationMap[key].totalPrice += parseFloat(record.totalPrice);
     });
-
-    return Object.values(aggregationMap).map(agg => ({
+    
+    let aggregatedData = Object.values(aggregationMap).map(agg => ({
         ...agg,
+        totalTime: agg.totalTime, // نحتاج القيمة الرقمية للفرز
         formattedTime: formatTime(agg.totalTime),
         totalPrice: agg.totalPrice.toFixed(2)
     }));
+
+    // 🚨 فرز البيانات المجمعة لضمان ظهور 1 ثم 2 ثم 3 وهكذا
+    if (groupByField === 'date') {
+         aggregatedData.sort((a, b) => {
+             const [dayA, monthA] = a.keyName.split('/').map(Number);
+             const [dayB, monthB] = b.keyName.split('/').map(Number);
+             
+             // نفترض أن التواريخ ضمن نفس السنة
+             if (monthA !== monthB) return monthA - monthB;
+             return dayA - dayB;
+         });
+    }
+
+    return aggregatedData;
 }
 
 
 // =======================================================
-// وظيفة 1: جلب البيانات الأولية للمرشحات
+// ✅ وظيفة 1: جلب البيانات الأولية للمرشحات (تم التأكد من صحتها)
 // =======================================================
 async function populateInitialFilters() {
     setupDateFilters(); 
 
-    // جلب الحسابات وتخزين بيانات السعر
+    // جلب الحسابات
     try {
         const accountsSnapshot = await db.collection('accounts').get();
         accountsSnapshot.forEach(doc => {
@@ -151,10 +173,10 @@ async function populateInitialFilters() {
             accountFilterEl.appendChild(option);
         });
     } catch (error) {
-        console.error("خطأ في جلب الحسابات:", error);
+        console.error("خطأ في جلب الحسابات (يُرجى مراجعة قواعد الأمان):", error);
     }
 
-    // جلب المستخدمين (role == 'user')
+    // جلب المستخدمين
     try {
         const usersSnapshot = await db.collection('users').where('role', '==', 'user').get();
         usersSnapshot.forEach(doc => {
@@ -165,19 +187,17 @@ async function populateInitialFilters() {
             userFilterEl.appendChild(option);
         });
     } catch (error) {
-        console.error("خطأ في جلب المستخدمين:", error);
+        console.error("خطأ في جلب المستخدمين (يُرجى مراجعة قواعد الأمان):", error);
     }
 }
 
 
 // =======================================================
-// وظيفة 3: تطبيق التصفية (المنطق المحدث)
+// ✅ وظيفة 3: تطبيق التصفية (إضافة الترتيب الضروري)
 // =======================================================
 applyBtn.addEventListener('click', async () => {
-    // 1. Animation للزر
+    // 1. Animation و مسح الجدول
     gsap.to(applyBtn, { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1, ease: "power1.inOut" });
-
-    // 2. مسح الجدول
     tableBody.innerHTML = '';
     resultsSection.classList.add('hidden');
     
@@ -201,7 +221,11 @@ applyBtn.addEventListener('click', async () => {
         query = query.where('userName', '==', selectedUser);
     }
 
-    // تطبيق فلتر التاريخ
+    // 🚨 إضافة الترتيب لضمان سحب البيانات بالترتيب الزمني
+    // (هذه الخطوة تتطلب إنشاء مؤشر مُركب في Firebase)
+    query = query.orderBy('timestamp', 'asc'); 
+
+    // تطبيق فلتر التاريخ (حساب الـ Timestamps)
     let fromTimestamp, toTimestamp;
 
     if (filterFromDateEl.value && filterToDateEl.value) {
@@ -212,7 +236,6 @@ applyBtn.addEventListener('click', async () => {
         const baseDate = new Date(singleDateInputEl.value);
         const mode = dateModeEl.value;
 
-        // حساب بداية ونهاية الفترة بناءً على mode
         if (mode === 'day') {
             fromTimestamp = baseDate.setHours(0, 0, 0, 0) / 1000;
             toTimestamp = baseDate.setHours(23, 59, 59, 999) / 1000;
@@ -238,8 +261,8 @@ applyBtn.addEventListener('click', async () => {
     try {
         recordsSnapshot = await query.get();
     } catch (error) {
-        console.error("🚨 خطأ في جلب سجلات العمل: قد تحتاج لإنشاء Index مناسب في Firebase.", error);
-        alert("حدث خطأ أثناء جلب البيانات. قد تحتاج لإنشاء Index مناسب في Firebase.");
+        console.error("🚨 خطأ في جلب سجلات العمل (يُرجي إنشاء Index):", error);
+        alert("حدث خطأ أثناء جلب البيانات. المشكلة هي 'Invalid Query' وتتطلب إنشاء المؤشر المُركب في Firebase.");
         return;
     }
 
@@ -254,7 +277,7 @@ applyBtn.addEventListener('click', async () => {
     let grandTotalTime = 0;
     let grandTotalPrice = 0;
 
-    if (filterScenario === 'AccountOnly') {
+    if (filterScenario === 'AccountOnly' || (filterScenario === 'None' && processedRecords.length > 0)) {
         finalData = aggregateRecords(processedRecords, 'date');
         tableHeaders = ["اليوم", "إجمالي الوقت", "إجمالي التكلفة"];
     } else if (filterScenario === 'UserOnly') {
@@ -272,21 +295,13 @@ applyBtn.addEventListener('click', async () => {
         
         tableHeaders = ["ملخص الحساب والمستخدم", "إجمالي الوقت", "إجمالي التكلفة"];
     } else {
-        // إذا كان هناك بيانات لكن السيناريو "None"، نفضل تجميعها حسب اليوم لتقرير شامل
-        if (processedRecords.length > 0) {
-             finalData = aggregateRecords(processedRecords, 'date');
-             tableHeaders = ["اليوم", "إجمالي الوقت", "إجمالي التكلفة"];
-        } else {
-             tableHeaders = ["اليوم", "إجمالي الوقت", "إجمالي التكلفة"];
-        }
+         tableHeaders = ["اليوم", "إجمالي الوقت", "إجمالي التكلفة"];
     }
     
-    // حساب الإجمالي الكلي
     if (finalData.length > 0) {
         grandTotalTime = finalData.reduce((sum, item) => sum + (item.totalTime || 0), 0);
         grandTotalPrice = finalData.reduce((sum, item) => sum + parseFloat(item.totalPrice || 0), 0);
     }
-
 
     // 6. عرض النتائج بانيميشن
     displayAggregatedResultsWithAnimation(finalData, tableHeaders, grandTotalTime, grandTotalPrice, filterScenario);
@@ -294,7 +309,7 @@ applyBtn.addEventListener('click', async () => {
 
 
 // =======================================================
-// وظيفة 4: عرض النتائج بـ GSAP (مصححة)
+// وظيفة 4: عرض النتائج بـ GSAP (تبقى كما هي)
 // =======================================================
 function displayAggregatedResultsWithAnimation(data, headers, grandTotalTime, grandTotalPrice, scenario) {
     if (data.length === 0) {
@@ -308,7 +323,6 @@ function displayAggregatedResultsWithAnimation(data, headers, grandTotalTime, gr
         { opacity: 1, y: 0, duration: 0.6, ease: "power2.out", display: 'block' }
     );
     
-    // تحديث عناوين الجدول
     const tableHeaderRow = document.getElementById('data-table').querySelector('thead tr');
     tableHeaderRow.innerHTML = ''; 
     headers.forEach(header => {
@@ -319,11 +333,9 @@ function displayAggregatedResultsWithAnimation(data, headers, grandTotalTime, gr
 
     tableBody.innerHTML = ''; 
 
-    // عرض البيانات المُجمعة (الصفوف الرئيسية)
     data.forEach(item => {
         const row = tableBody.insertRow();
         
-        // عرض البيانات
         row.insertCell().textContent = item.keyName || item.accountName; 
         row.insertCell().textContent = item.formattedTime;
         row.insertCell().textContent = `${item.totalPrice} ج.م`;
@@ -331,7 +343,6 @@ function displayAggregatedResultsWithAnimation(data, headers, grandTotalTime, gr
         gsap.set(row, { opacity: 0, y: 20 });
     });
     
-    // إضافة صف الإجمالي الكلي
     if (grandTotalTime > 0) {
         const totalRow = tableBody.insertRow();
         totalRow.classList.add('grand-total-row');
@@ -340,7 +351,7 @@ function displayAggregatedResultsWithAnimation(data, headers, grandTotalTime, gr
         
         const firstCell = totalRow.insertCell();
         firstCell.textContent = 'الإجمالي الكلي للفترة:';
-        firstCell.colSpan = colCount - 2; // دمج الخلايا المتبقية
+        firstCell.colSpan = colCount - 2; 
 
         totalRow.insertCell().textContent = formatTime(grandTotalTime);
         totalRow.insertCell().textContent = `${grandTotalPrice.toFixed(2)} ج.م`;
@@ -348,7 +359,6 @@ function displayAggregatedResultsWithAnimation(data, headers, grandTotalTime, gr
         gsap.set(totalRow, { opacity: 0, scaleY: 0 });
     }
     
-    // تطبيق الـ Staggered Fade-in/Slide-up
     gsap.to(tableBody.querySelectorAll('tr'), {
         opacity: 1,
         y: 0,
